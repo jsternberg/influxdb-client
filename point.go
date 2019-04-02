@@ -2,14 +2,13 @@ package influxdb
 
 import (
 	"bytes"
-	"io"
 	"time"
 )
 
 // PointEncoder can encode the point using the given Protocol and will return an io.Reader
 // to read the encoded points.
 type PointEncoder interface {
-	Encode(p Protocol) (io.Reader, error)
+	Encode(p Protocol) ([]byte, error)
 }
 
 // Tag is a key/value pair of strings that is indexed when inserted into a measurement.
@@ -52,26 +51,27 @@ type Point struct {
 	Time   time.Time
 }
 
-// Encode will encode the point into a PointEncoder.
-func (pt *Point) Encode(p Protocol) (io.Reader, error) {
-	buf := bytes.NewBuffer(nil)
-	if err := p.Encode(buf, pt); err != nil {
+// Encode will encode the point into a PointBuffer.
+func (pt *Point) Encode(p Protocol) ([]byte, error) {
+	buf := NewPointBuffer(p)
+	if err := buf.WritePoint(pt); err != nil {
 		return nil, err
 	}
-	return buf, nil
+	return buf.Bytes(), nil
 }
 
 // Points is a slice of points that will all be written together.
 type Points []*Point
 
-func (a Points) Encode(p Protocol) (io.Reader, error) {
-	buf := bytes.NewBuffer(nil)
+// Encode will encode the collection of points to a PointBuffer.
+func (a Points) Encode(p Protocol) ([]byte, error) {
+	buf := NewPointBuffer(p)
 	for _, pt := range a {
-		if err := p.Encode(buf, pt); err != nil {
+		if err := buf.WritePoint(pt); err != nil {
 			return nil, err
 		}
 	}
-	return buf, nil
+	return buf.Bytes(), nil
 }
 
 // PointBuffer holds a buffer of encoded points that can then be written to
@@ -92,12 +92,10 @@ func (pb *PointBuffer) WritePoint(pt *Point) error {
 }
 
 // Encode will return a byte reader that contains the data in this PointBuffer.
-func (pb *PointBuffer) Encode(p Protocol) (io.Reader, error) {
+func (pb *PointBuffer) Encode(p Protocol) ([]byte, error) {
 	// If the protocols are different, return an error.
 	if pb.p != p {
 		return nil, ErrMismatchedProtocol
 	}
-
-	// Return the buffer directly using a new bytes.Reader.
-	return bytes.NewReader(pb.Buffer.Bytes()), nil
+	return pb.Bytes(), nil
 }

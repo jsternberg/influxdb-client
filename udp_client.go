@@ -2,13 +2,13 @@ package influxdb
 
 import (
 	"context"
-	"io"
 	"net"
 )
 
 // udpProtocol contains the protocol used for all udp connections.
 var udpProtocol = LineProtocol.V1()
 
+// UDPClient is a client for the UDP endpoint.
 type UDPClient struct {
 	conn net.Conn
 }
@@ -28,7 +28,7 @@ func (c *UDPClient) Write(ctx context.Context, enc PointEncoder) error {
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(c.conn, body)
+	_, err = c.conn.Write(body.Bytes())
 	return err
 }
 

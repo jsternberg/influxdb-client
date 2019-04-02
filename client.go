@@ -25,12 +25,17 @@ type Querier interface {
 
 // Writer will write a PointEncoder to the underlying Writer.
 type Writer interface {
+	// Write will write the points from the encoder to the endpoint.
 	Write(ctx context.Context, enc PointEncoder) error
+
+	// Protocol returns the protocol used for this writer.
+	Protocol() Protocol
 }
 
 // DefaultUserAgent contains the default user agent when none is set.
 const DefaultUserAgent = "jsternberg/influxdb-client"
 
+// Client is the HTTP client for writing data.
 type Client struct {
 	// Client contains the Client that will be used to make requests.
 	// If this is blank, http.DefaultClient is used.
